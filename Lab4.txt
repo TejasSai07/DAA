@@ -1,0 +1,114 @@
+1.
+SELECT course_id, COUNT(*) AS num_students
+FROM takes
+GROUP BY course_id;
+
+2.
+SELECT dept_name
+FROM student
+GROUP BY dept_name
+HAVING AVG(tot_cred) > 10;
+
+3.
+SELECT dept_name, COUNT(*) AS num_courses
+FROM course
+GROUP BY dept_name;
+
+4.
+SELECT dept_name, AVG(salary) AS avg_salary
+FROM instructor
+GROUP BY dept_name
+HAVING AVG(salary) > 42000;
+
+5.
+SELECT course_id, sec_id, COUNT(*) AS enrollment
+FROM takes
+WHERE semester = 'Spring' AND year = 2009
+GROUP BY course_id, sec_id;
+
+6.
+SELECT c.course_id, c.title, p.prereq_id
+FROM course c
+JOIN prereq p ON c.course_id = p.course_id
+ORDER BY c.course_id;
+
+7.
+SELECT ID, name, dept_name, salary
+FROM instructor
+ORDER BY salary DESC;
+
+8.
+SELECT MAX(total_salary) AS max_total_salary
+FROM (SELECT dept_name, SUM(salary) AS total_salary FROM instructor GROUP BY dept_name) AS department_salaries;
+
+9.
+SELECT dept_name, AVG(salary) AS avg_instructor_salary
+FROM instructor
+GROUP BY dept_name
+HAVING AVG(salary) > 42000;
+
+10.
+SELECT course_id, sec_id
+FROM takes
+WHERE semester = 'Spring' AND year = 2010
+GROUP BY course_id, sec_id
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+
+11.
+SELECT i.name
+FROM instructor i
+WHERE NOT EXISTS (
+    SELECT s.ID
+    FROM student s
+    WHERE s.dept_name = 'CSE' AND NOT EXISTS (
+        SELECT t.ID
+        FROM takes t
+        WHERE t.ID = s.ID AND NOT EXISTS (
+            SELECT ti.course_id
+            FROM teaches ti
+            WHERE ti.ID = i.ID AND ti.course_id = t.course_id
+        )
+    )
+);
+
+12.
+SELECT dept_name, AVG(salary) AS avg_salary
+FROM instructor
+GROUP BY dept_name
+HAVING AVG(salary) > 50000 AND COUNT(ID) > 5;
+
+13.
+WITH MaxBudgetDepartment AS (
+    SELECT dept_name
+    FROM department
+    ORDER BY budget DESC
+    LIMIT 1
+)
+SELECT dept_name
+FROM MaxBudgetDepartment;
+
+
+14.
+WITH DepartmentSalaries AS (
+    SELECT dept_name, SUM(salary) AS total_salary
+    FROM instructor
+    GROUP BY dept_name
+)
+SELECT dept_name
+FROM DepartmentSalaries
+WHERE total_salary > (SELECT AVG(total_salary) FROM DepartmentSalaries);
+
+
+15.
+UPDATE students
+SET dept_name = 'IT'
+WHERE dept_name = 'CSE';
+
+
+16.
+UPDATE instructor
+SET salary = CASE
+    WHEN salary > 100000 THEN salary * 1.03
+    ELSE salary * 1.05
+END;
