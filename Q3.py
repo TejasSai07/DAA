@@ -1,13 +1,3 @@
-graph = {
-    'D': {'B': 17},
-    'B': {'D': 15},
-    'H': {'B': 40, 'D': 53, 'T': 31},
-    'F': {'B': 46, 'M': 11},
-    'M': {'T': 8},
-    'T': {'F': 3, 'C': 29},
-    'C': {'M': 40, 'H': 17},
-}
-
 def ucs(graph, start, goal):
     frontier = [(0, start)]  
     visited = set()  
@@ -40,7 +30,23 @@ def ucs(graph, start, goal):
 
     return path
 
-start_node = 'M'
-goal_node = 'D'
-shortest_path = ucs(graph, start_node, goal_node)
+def parse_graph_input():
+    graph = {}
+    while True:
+        edge = input("Enter an edge in the format 'node1 node2 cost', or type 'done' to finish: ").split()
+        if edge[0] == 'done':
+            break
+        node1, node2, cost = edge
+        cost = int(cost)
+        if node1 not in graph:
+            graph[node1] = {}
+        if node2 not in graph:
+            graph[node2] = {}
+        graph[node1][node2] = cost
+    return graph
+
+user_graph = parse_graph_input()
+start_node = input("Enter the start node: ")
+goal_node = input("Enter the goal node: ")
+shortest_path = ucs(user_graph, start_node, goal_node)
 print("Shortest path from", start_node, "to", goal_node, ":", shortest_path)
