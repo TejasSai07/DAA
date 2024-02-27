@@ -1,1 +1,157 @@
+1.
+DECLARE
+    CURSOR instructor_cursor IS
+        SELECT instructor_id, salary
+        FROM instructors
+        WHERE department_number = :department_number;
+
+    v_instructor_id instructors.instructor_id%TYPE;
+    v_salary instructors.salary%TYPE;
+BEGIN
+    FOR instructor_rec IN instructor_cursor LOOP
+        v_salary := instructor_rec.salary * 1.05;
+
+        UPDATE instructors
+        SET salary = v_salary
+        WHERE instructor_id = instructor_rec.instructor_id;
+
+        INSERT INTO salary_raise (Instructor_Id, Raise_date, Raise_amt)
+        VALUES (instructor_rec.instructor_id, SYSDATE, (v_salary - instructor_rec.salary));
+    END LOOP;
+    COMMIT;
+END;
+/
+
+2.
+DECLARE
+    CURSOR student_cursor IS
+        SELECT s.student_id, s.student_name, d.dept_name, s.tot_cred
+        FROM students s
+        JOIN departments d ON s.dept_id = d.dept_id
+        ORDER BY s.tot_cred
+        FETCH FIRST 10 ROWS ONLY;
+
+    v_student_id students.student_id%TYPE;
+    v_student_name students.student_name%TYPE;
+    v_dept_name departments.dept_name%TYPE;
+    v_tot_cred students.tot_cred%TYPE;
+BEGIN
+    FOR student_rec IN student_cursor LOOP
+        DBMS_OUTPUT.PUT_LINE('ID: ' || student_rec.student_id || ', Name: ' || student_rec.student_name || ', Dept Name: ' || student_rec.dept_name || ', Total Credits: ' || student_rec.tot_cred);
+    END LOOP;
+END;
+/
+
+3.
+DECLARE
+    CURSOR course_cursor IS
+        SELECT c.course_id, c.title, d.dept_name, c.credits, i.instructor_name, b.building, r.room_number, ts.time_slot_id, COUNT(t.student_id) AS tot_student_no
+        FROM courses c
+        JOIN departments d ON c.dept_id = d.dept_id
+        JOIN instructors i ON c.instructor_id = i.instructor_id
+        JOIN course_offerings co ON c.course_id = co.course_id
+        JOIN classrooms cl ON co.classroom_id = cl.classroom_id
+        JOIN buildings b ON cl.building = b.building_name
+        JOIN rooms r ON cl.room_number = r.room_number AND cl.building = r.building
+        JOIN time_slots ts ON co.time_slot_id = ts.time_slot_id
+        LEFT JOIN takes t ON c.course_id = t.course_id
+        GROUP BY c.course_id, c.title, d.dept_name, c.credits, i.instructor_name, b.building, r.room_number, ts.time_slot_id;
+
+    v_course_id courses.course_id%TYPE;
+    v_title courses.title%TYPE;
+    v_dept_name departments.dept_name%TYPE;
+    v_credits courses.credits%TYPE;
+    v_instructor_name instructors.instructor_name%TYPE;
+    v_building buildings.building%TYPE;
+    v_room_number rooms.room_number%TYPE;
+    v_time_slot_id time_slots.time_slot_id%TYPE;
+    v_tot_student_no NUMBER;
+BEGIN
+    FOR course_rec IN course_cursor LOOP
+        DBMS_OUTPUT.PUT_LINE('Course ID: ' || course_rec.course_id || ', Title: ' || course_rec.title || ', Dept Name: ' || course_rec.dept_name || ', Credits: ' || course_rec.credits || ', Instructor: ' || course_rec.instructor_name || ', Building: ' || course_rec.building || ', Room Number: ' || course_rec.room_number || ', Time Slot ID: ' || course_rec.time_slot_id || ', Total Students: ' || course_rec.tot_student_no);
+    END LOOP;
+END;
+/
+
+4.
+DECLARE
+    v_course_id courses.course_id%TYPE := 'CS101'; -- Specify the course ID here.
+BEGIN
+    FOR takes_rec IN (SELECT * FROM takes WHERE course_id = v_course_id) LOOP
+        DECLARE
+            v_tot_cred students.tot_cred%TYPE;
+        BEGIN
+            SELECT tot_cred INTO v_tot_cred FROM students WHERE student_id = takes_rec.student_id;
+
+            IF v_tot_cred < 30 THEN
+                DELETE FROM takes WHERE student_id = takes_rec.student_id AND course_id = v_course_id;
+                DBMS_OUTPUT.PUT_LINE('Student ' || takes_rec.student_id || ' deregistered from course ' || v_course_id);
+            END IF;
+        END;
+    END LOOP;
+END;
+/
+
+5.
+DECLARE
+    CURSOR student_cursor IS
+        SELECT student_id, gpa
+        FROM students;
+        
+    v_student_id students.student_id%TYPE;
+    v_gpa students.gpa%TYPE;
+    v_letter_grade VARCHAR2(2);
+BEGIN
+    UPDATE students SET LetterGrade = 'F';
+    
+    FOR student_rec IN student_cursor LOOP
+        v_student_id := student_rec.student_id;
+        v_gpa := student_rec.gpa;
+        
+        IF v_gpa >= 4.0 THEN
+            v_letter_grade := 'A';
+        ELSIF v_gpa >= 3.0 THEN
+            v_letter_grade := 'B';
+        ELSIF v_gpa >= 2.0 THEN
+            v_letter_grade := 'C';
+        ELSIF v_gpa >= 1.0 THEN
+            v_letter_grade := 'D';
+        ELSE
+            v_letter_grade := 'F';
+        END IF;
+        
+        UPDATE students SET LetterGrade = v_letter_grade WHERE student_id = v_student_id;
+    END LOOP;
+    
+    COMMIT; 
+END;
+/
+
+6.
+DECLARE
+    v_course_id courses.course_id%TYPE := 'SPECIFIED_COURSE_ID'; 
+    FOR instructor_rec IN (SELECT i.instructor_name
+                           FROM instructors i
+                           JOIN courses c ON i.instructor_id = c.instructor_id
+                           WHERE c.course_id = v_course_id) LOOP
+        DBMS_OUTPUT.PUT_LINE('Instructor: ' || instructor_rec.instructor_name);
+    END LOOP;
+END;
+/
+
+7.
+DECLARE
+    v_advisor_id students.advisor_id%TYPE;
+BEGIN
+    FOR student_rec IN (SELECT student_id, advisor_id FROM students) LOOP
+        v_advisor_id := student_rec.advisor_id;
+
+        FOR course_rec IN (SELECT course_id FROM courses WHERE instructor_id = v_advisor_id) LOOP
+            IF EXISTS (SELECT 1 FROM takes WHERE student_id = student_rec.student_id AND course_id = course_rec.course_id) THEN
+                DBMS_OUTPUT.PUT_LINE('Student ID: ' || student_rec.student_id || ' is registered for a course taught by their advisor.');
+            END IF;
+        END LOOP;
+    END LOOP;
+END;
+/
 
